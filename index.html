@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Basketball Tracking — WebCV</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">🏀</div>
+    <div class="header-text">
+      <h1>Basketball Tracking</h1>
+      <p>Real-time player &amp; ball detection — WebCV Edition</p>
+    </div>
+    <div class="header-right">
+      <span class="badge" id="modeBadge">WebRTC + Canvas</span>
+      <div class="status-dot" id="statusDot"></div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Video area -->
+    <section class="video-section">
+      <div class="video-wrapper" id="videoWrapper">
+        <video id="videoEl" autoplay playsinline muted></video>
+        <canvas id="canvasEl"></canvas>
+        <div class="placeholder" id="placeholder">
+          <i class="ti ti-video-off" aria-hidden="true"></i>
+          <p>กดปุ่ม "เปิดกล้อง" เพื่อเริ่มใช้งาน</p>
+          <small>ต้องการ HTTPS หรือ localhost</small>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="btn primary" id="startBtn" onclick="startCamera()">
+          <i class="ti ti-camera" aria-hidden="true"></i> เปิดกล้อง
+        </button>
+        <button class="btn danger" id="stopBtn" onclick="stopCamera()" style="display:none">
+          <i class="ti ti-camera-off" aria-hidden="true"></i> ปิดกล้อง
+        </button>
+        <button class="btn" onclick="takeSnapshot()" title="บันทึกภาพ">
+          <i class="ti ti-screenshot" aria-hidden="true"></i> จับภาพ
+        </button>
+        <button class="btn" onclick="resetStats()" title="รีเซ็ตสถิติ">
+          <i class="ti ti-refresh" aria-hidden="true"></i> รีเซ็ต
+        </button>
+        <button class="btn" onclick="toggleFullscreen()" title="เต็มจอ">
+          <i class="ti ti-maximize" aria-hidden="true"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- Live Stats -->
+      <div class="panel">
+        <div class="panel-title">สถิติ Live</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-label">FPS</span>
+            <span class="stat-value highlight" id="fpsVal">--</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">ผู้เล่น</span>
+            <span class="stat-value" id="playerCount">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">ลูกบาส</span>
+            <span class="stat-value" id="ballCount">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Frames</span>
+            <span class="stat-value" id="frameCount">0</span>
+          </div>
+        </div>
+        <div class="stat-row"><span class="stat-label">เวลาที่ผ่านมา</span><span class="stat-value" id="elapsed">0s</span></div>
+        <div class="stat-row"><span class="stat-label">ความละเอียด</span><span class="stat-value" id="resolutionInfo">--</span></div>
+      </div>
+
+      <!-- Minimap -->
+      <div class="panel">
+        <div class="panel-title">Mini-map สนาม</div>
+        <div class="minimap-wrapper">
+          <canvas id="minimapCanvas" width="260" height="138"></canvas>
+        </div>
+        <p class="minimap-caption">ตำแหน่งผู้เล่นบนสนาม (court projection)</p>
+      </div>
+
+      <!-- Detection list -->
+      <div class="panel">
+        <div class="panel-title">วัตถุที่ตรวจพบ</div>
+        <div class="detection-list" id="detectionList">
+          <div class="detection-empty">ยังไม่ได้เริ่มต้น</div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="panel">
+        <div class="panel-title">การตั้งค่า</div>
+        <div class="settings-row">
+          <span class="settings-label">แสดง Bounding Box</span>
+          <div class="toggle on" id="toggleBbox" onclick="toggleSetting('bbox')"></div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">แสดง Trajectory</span>
+          <div class="toggle on" id="toggleTraj" onclick="toggleSetting('traj')"></div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">แสดง Label</span>
+          <div class="toggle on" id="toggleLabel" onclick="toggleSetting('label')"></div>
+        </div>
+        <div class="settings-row">
+          <span class="settings-label">แสดง Mini-map</span>
+          <div class="toggle on" id="toggleMap" onclick="toggleSetting('map')"></div>
+        </div>
+        <div class="slider-row">
+          <div class="slider-label">
+            <span>ความไวการตรวจจับ</span>
+            <span id="sensVal">50%</span>
+          </div>
+          <input type="range" min="10" max="90" value="50" step="1" oninput="setSens(this.value)">
+        </div>
+        <div class="slider-row">
+          <div class="slider-label">
+            <span>ความยาว Trajectory</span>
+            <span id="trajLenVal">30</span>
+          </div>
+          <input type="range" min="5" max="80" value="30" step="5" oninput="setTrajLen(this.value)">
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>BasketTracking WebCV — inspired by <a href="https://github.com/Basket-Analytics/BasketTracking" target="_blank" rel="noopener">BasketAnalytics/BasketTracking</a></span>
+    <span>OpenCV + Detectron2 Python edition available on GitHub</span>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
